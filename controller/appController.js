@@ -24,7 +24,7 @@ const appController = {
 
       const uploadedFiles = [];
       const allowedFormats = ['.apk', '.png', '.jpg', '.jpeg', '.mp4', ''];
-      const fileSizeLimit = 10 * 1024 * 1024;
+      const fileSizeLimit = 100 * 1024 * 1024;
       const filesArray = Object.values(req.files);
 
       const uploadPromises = filesArray.map(async (file) => {
@@ -148,9 +148,7 @@ const appController = {
   },
   getAppicon: async (req, res) => {
     const applicationModel = new appModel();
-    console.log(req);
     const app_id = req.params.id;
-    console.log(`appId at app icon controller`, app_id);
     const files = await applicationModel.getAppicon(app_id);
     res.json(files);
   },

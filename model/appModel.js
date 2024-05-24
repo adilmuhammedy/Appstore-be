@@ -60,7 +60,6 @@ class ApplicationModel {
   }
 
   async getApplication(app_id) {
-    console.log(app_id);
     const params = {
       TableName,
       Key: {
@@ -215,7 +214,6 @@ class ApplicationModel {
     };
 
     try {
-      console.log(`got app id req app icon`, app_id);
       const data = await s3.listObjectsV2(params).promise();
       const files = data.Contents
         .filter(file => !file.Key.endsWith('.apk') && file.Key.includes(`${app_id}/appicon`)) // Filter out .apk files and only include files starting with "screenshot"
@@ -229,7 +227,6 @@ class ApplicationModel {
             })
           };
         });
-        console.log(`filessss`,files);
       return files;
     } catch (err) {
       console.error('Error listing files:', err);
@@ -289,79 +286,18 @@ class ApplicationModel {
   }
 
 }
+// const appModel = new ApplicationModel();
+// appModel.getApk("209cf276-f260-4911-9752-9f1e901add83")
+// .then(apkInfo => {
+//   if (apkInfo) {
+//     console.log('APK Info:', apkInfo);
+//   } else {
+//     console.log('No APK file found.');
+//   }
+// })
+// .catch(error => {
+//   console.error('Error fetching APK:', error);
+// });
 
 module.exports = ApplicationModel;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// const { Sequelize, DataTypes } = require('sequelize');
-// const sequelize = require('../config');
-
-// const Application = sequelize.define('application', {
-//   app_id: {
-//     type: DataTypes.INTEGER,
-//     primaryKey: true,
-//     autoIncrement: true
-//   },
-//   appname: {
-//     type: DataTypes.STRING
-//   },
-//   age_rating_id: {
-//     type: DataTypes.STRING
-//   },
-//   category_id: {
-//     type: DataTypes.STRING
-//   },
-//   tags: {
-//     type: DataTypes.STRING
-//   },
-//   short_description: {
-//     type: DataTypes.TEXT
-//   },
-//   long_description: {
-//     type: DataTypes.TEXT
-//   },
-//   support_url: {
-//     type: DataTypes.STRING
-//   },
-//   website_url: {
-//     type: DataTypes.STRING
-//   },
-//   status: {
-//     type: DataTypes.STRING
-//   }
-// },
-//   {
-//     timestamps: true,
-//     freezeTableName: true,
-
-//   });
-// // Application.sync({ force: true })
-// sequelize.sync()
-//   .then(() => {
-//     console.log('App Tables have been created if not exist.');
-//   });
-
-// module.exports = Application;

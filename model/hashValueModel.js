@@ -98,35 +98,3 @@ module.exports = HashValueModel;
 
 
 
-
-
-
-
-
-
-
-
-
-// const { DataTypes } = require('sequelize');
-// const sequelize = require('../config');
-
-// const HashValue = sequelize.define('hashvalues', {
-//     app_id: {
-//         type: DataTypes.INTEGER,
-//         primaryKey: true,
-//         allowNull: false,
-//         references: {
-//             model: 'application', // Assuming your application table is named 'Applications'
-//             key: 'app_id'
-//         }
-//     },
-//     hashValue: {
-//         type: DataTypes.STRING,
-//         allowNull: false
-//     }
-// });
-// sequelize.sync()
-//     .then(() => {
-//         console.log('hashvalue Tables have been created if not exist.');
-//     });
-// module.exports = HashValue;

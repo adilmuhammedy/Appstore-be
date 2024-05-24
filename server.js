@@ -5,6 +5,7 @@ const fileUpload = require("express-fileupload");
 const authRoutes = require("./routes/userRoutes");
 const appRouter = require("./routes/appRoute");
 const mobsfRouter = require("./routes/mobsfRoute");
+const validationRouter = require("./routes/validationRoute");
 const swaggerJsdoc = require("swagger-jsdoc");  // Corrected variable name
 const swaggerUi = require("swagger-ui-express");  // Corrected variable name
 
@@ -28,7 +29,7 @@ app.use("/auth", authRoutes);
 app.use("/app", appRouter);
 app.use("/uploadapp", appRouter);
 app.use("/mobsf", mobsfRouter)
-
+app.use("/validate",validationRouter);
 
 const options1 = {
   definition: {

@@ -88,5 +88,45 @@ router.post('/login', userController.login);
  *         description: Internal server error
  */
 router.post('/register', userController.createUser);
+/**
+ /**
+ * @swagger
+ * /auth/profile:
+ *   post:
+ *     summary: Fetches user profile data
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 description: The user's username
+ *     responses:
+ *       200:
+ *         description: User profile data fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 username:
+ *                   type: string
+ *                   description: The user's username
+ *                 role:
+ *                   type: string
+ *                   description: The user's role
+ *                 userid:
+ *                   type: string
+ *                   description: The user's unique ID
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/profile', userController.getUser);
 
 module.exports = router;

@@ -63,10 +63,30 @@ class UserModel {
     };
     try {
       const data = await dynamoDB.query(params).promise();
-      // console.log(`data`, data.Items)
       return data.Items;
     } catch (err) {
       console.error("Error getting user:", err);
+      return null;
+    }
+  }
+
+  async getUserById(userid) {
+    const params = {
+      TableName,
+      Key: {
+        "userid": { S: userid }
+      },
+      ProjectionExpression: "userid, username, #rl", // Using alias for 'role'
+      ExpressionAttributeNames: {
+        '#rl': 'role' // Alias for 'role' attribute
+      }
+    };
+
+    try {
+      const data = await dynamoDB.getItem(params).promise();
+      return data.Item;
+    } catch (err) {
+      console.error("Error getting user by ID:", err);
       return null;
     }
   }
@@ -76,52 +96,3 @@ module.exports = UserModel;
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// const { DataTypes } = require('sequelize');
-// const sequelize = require('../config');
-// const User = sequelize.define('User', {
-//   uid: {
-//     type: DataTypes.INTEGER,
-//     primaryKey: true,
-//     autoIncrement: true,
-//   },
-//   username: {
-//     type: DataTypes.STRING,
-//     unique: true,
-//   },
-//   password: {
-//     type: DataTypes.STRING,
-//   },
-//   role: {
-//     type: DataTypes.STRING,
-//   }
-// }, {
-//   timestamps: true,
-//   freezeTableName: true,
-// });
-
-// module.exports=User;

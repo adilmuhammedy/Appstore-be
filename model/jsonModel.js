@@ -96,7 +96,6 @@ class JsonModel {
     async uploadJsonFileToS3(app_id, jsonReport) {
         const jsonReportString = JSON.stringify(jsonReport);
         const fileName = `${app_id}.json`; // Naming the file with app_id
-    
         const params = {
             Bucket: `adil-develop-app-json`,
             Key: `jsonReports/${fileName}`, // Path to store the file in S3
