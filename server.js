@@ -29,7 +29,7 @@ app.use("/auth", authRoutes);
 app.use("/app", appRouter);
 app.use("/uploadapp", appRouter);
 app.use("/mobsf", mobsfRouter)
-app.use("/validate",validationRouter);
+app.use("/validation",validationRouter);
 
 const options1 = {
   definition: {

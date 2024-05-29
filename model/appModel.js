@@ -5,6 +5,7 @@ const { DynamoDB } = require('aws-sdk');
 const dynamoDB = new DynamoDB({ region: process.env.AWS_Region });
 const HashValueModel = require('./hashValueModel');
 const JsonModel = require('./jsonModel');
+const TestCaseModel = require('./testCaseModel');
 
 function getAWSConfig() {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -154,7 +155,7 @@ class ApplicationModel {
 
       const hashValueModel = new HashValueModel();
       const jsonModel = new JsonModel();
-
+      const testCase = new TestCaseModel();
       // Delete the JSON report file
       const jsonDeleted = await jsonModel.deleteJsonFileFromS3(app_id);
       if (!jsonDeleted) {
@@ -164,6 +165,11 @@ class ApplicationModel {
       const hashDeleted = await hashValueModel.deleteHashValue(app_id);
       if (!hashDeleted) {
         console.log('Failed to delete hash value.');
+      }
+
+      const testcaseDeleted= await testCase.deleteValidation(app_id);
+      if(!testcaseDeleted){
+        console.log(`failed to delete testcase result. `);
       }
       // Delete the application from DynamoDB
       const deleteAppParams = {
@@ -282,6 +288,30 @@ class ApplicationModel {
     } catch (err) {
       console.error('Error listing files:', err);
       return null;
+    }
+  }
+  async updateAppStatus(app_id, status) {
+    const params = {
+      TableName,
+      Key: {
+        "app_id": { S: app_id.toString() }
+      },
+      UpdateExpression: "set #status = :status",
+      ExpressionAttributeNames: {
+        "#status": "status"
+      },
+      ExpressionAttributeValues: {
+        ":status": { S: status }
+      },
+      ReturnValues: "ALL_NEW"
+    };
+
+    try {
+      const result = await dynamoDB.updateItem(params).promise();
+      return result.Attributes;
+    } catch (err) {
+      console.error("Error updating application status:", err);
+      throw err;
     }
   }
 

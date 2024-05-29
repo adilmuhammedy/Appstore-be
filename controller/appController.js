@@ -4,6 +4,7 @@ const AWS = require('aws-sdk');
 const { v4: uuidv4 } = require('uuid');
 require('dotenv').config();
 const appModel = require('../model/appModel');
+const testCaseModel=require('../model/testCaseModel');
 
 // Configure AWS SDK
 const s3 = new AWS.S3({
@@ -67,7 +68,21 @@ const appController = {
         price: req.body.price,
         status: "Submitted",
       };
-
+      const validations=[
+        "APK Signature",
+        "App Permissions",
+        "Supported Devices and Screen Sizes",
+        "Code Quality",
+        "App content",
+        "App security",
+        "Performance",
+        "Accessibility",
+        "App store guidelines and policies",
+        "App icons and screenshots"
+      ];
+      const testModel = new testCaseModel();
+      const testcaseinsert=testModel.insertValidation(app_id,validations);
+      console.log(`newa validation created`,  testcaseinsert);
       const result = await applicationModel.createApplication(appDetails);
       if (result) {
         res.status(201).json({ message: "Application created successfully", uploadedFiles });
@@ -163,6 +178,23 @@ const appController = {
     const app_id = req.params.id;
     const files = await applicationModel.getApk(app_id);
     res.json(files);
+  },
+  updateAppStatus: async (req, res) => {
+    const applicationModel = new appModel();
+    const app_id = req.params.id;
+    const { status } = req.body;
+
+    try {
+      const updatedApplication = await applicationModel.updateAppStatus(app_id, status);
+      if (updatedApplication) {
+        res.status(200).json({ message: "Application status updated successfully", updatedApplication });
+      } else {
+        res.status(404).json({ message: "Application not found" });
+      }
+    } catch (err) {
+      console.error("Error updating application status:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
   }
 };
 

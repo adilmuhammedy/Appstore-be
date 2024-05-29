@@ -266,4 +266,5 @@ router.put('/update/:id', appController.updateApplication);
  */
 router.get('/fetchapkfile/:id', appController.getApk);
 
+router.post('/updatestatus/:id', appController.updateAppStatus);
 module.exports = router;
