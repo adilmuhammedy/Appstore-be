@@ -102,9 +102,10 @@ router.get('/getApps', appController.getAllApps);
  */
 router.get('/:id', appController.getApp);
 
+
 /**
  * @swagger
- * /app/screenshots/{id}:
+ * /app/getscreenshots/{id}:
  *   get:
  *     summary: Get screenshots by app ID
  *     tags: [Apps]
@@ -121,7 +122,123 @@ router.get('/:id', appController.getApp);
  *       500:
  *         description: Internal server error
  */
-router.get('/screenshots/:id', appController.getScreenshot);
+router.get('/getscreenshots/:id', appController.getScreenshot);
+
+
+/**
+ * @swagger
+ * /app/deletescreenshot:
+ *   post:
+ *     summary: Delete a screenshot
+ *     tags: [Apps]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               app_id:
+ *                 type: string
+ *               key:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Screenshot deleted successfully
+ *       500:
+ *         description: Internal server error
+ * */
+router.post('/deletescreenshot', appController.deleteScreenshot);
+
+
+/**
+ * @swagger
+* /app/uploadnewscreenshot:
+*   post:
+*     summary: Upload new screenshots
+*     tags: [Apps]
+*     requestBody:
+*       required: true
+*       content:
+*         multipart/form-data:
+*           schema:
+*             type: object
+*             properties:
+*               app_id:
+*                 type: string
+*               screenshot:
+*                 type: array
+*                 items:
+*                   type: string
+*                   format: binary
+*     responses:
+*       201:
+*         description: Screenshots uploaded successfully
+*       400:
+*         description: Error creating application
+*       500:
+*         description: Internal server error
+*/
+router.post('/uploadnewscreenshot',appController.uploadNewScreenshots);
+
+
+/**
+ * @swagger
+* /app/updateappicon:
+*   post:
+*     summary: Update app icon
+*     tags: [Apps]
+*     requestBody:
+*       required: true
+*       content:
+*         multipart/form-data:
+*           schema:
+*             type: object
+*             properties:
+*               app_id:
+*                 type: string
+*               appicon:
+*                 type: string
+*                 format: binary
+*     responses:
+*       201:
+*         description: App icon updated successfully
+*       400:
+*         description: Error updating app icon
+*       500:
+*         description: Internal server error
+*/
+router.post('/updateappicon',appController.updateAppIcon);
+
+
+/**
+ * @swagger
+* /app/updateappvideo:
+ *   post:
+ *     summary: Update app video
+ *     tags: [Apps]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               app_id:
+ *                 type: string
+ *               appvideo:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: App video updated successfully
+ *       400:
+ *         description: Error updating app video
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/updateappvideo',appController.updateAppVideo);
+
 
 /**
  * @swagger
@@ -266,5 +383,37 @@ router.put('/update/:id', appController.updateApplication);
  */
 router.get('/fetchapkfile/:id', appController.getApk);
 
+/**
+ * @swagger
+ * * /app/updatestatus/{id}:
+ *   post:
+ *     summary: Update application status by ID
+ *     tags: [Apps]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The app ID
+ *       - in: body
+ *         name: status
+ *         required: true
+ *         schema:
+ *           type: object
+ *           properties:
+ *             status:
+ *               type: string
+ *         description: The new status of the application
+ *     responses:
+ *       200:
+ *         description: Application status updated successfully
+ *       404:
+ *         description: Application not found
+ *       500:
+ *         description: Internal server error
+ */
 router.post('/updatestatus/:id', appController.updateAppStatus);
+
+
 module.exports = router;

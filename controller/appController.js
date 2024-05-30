@@ -27,7 +27,6 @@ const appController = {
       const allowedFormats = ['.apk', '.png', '.jpg', '.jpeg', '.mp4', ''];
       const fileSizeLimit = 100 * 1024 * 1024;
       const filesArray = Object.values(req.files);
-
       const uploadPromises = filesArray.map(async (file) => {
         const fileExtension = path.extname(file.name).toLowerCase();
         if (!allowedFormats.includes(fileExtension)) {
@@ -82,7 +81,7 @@ const appController = {
       ];
       const testModel = new testCaseModel();
       const testcaseinsert=testModel.insertValidation(app_id,validations);
-      console.log(`newa validation created`,  testcaseinsert);
+      // console.log(`newa validation created`,  testcaseinsert);
       const result = await applicationModel.createApplication(appDetails);
       if (result) {
         res.status(201).json({ message: "Application created successfully", uploadedFiles });
@@ -161,18 +160,190 @@ const appController = {
     const files = await applicationModel.getScreenshot(app_id);
     res.json(files);
   },
+  deleteScreenshot: async (req,res) => {
+    const applicationModel = new appModel();
+    const app_id=req.body.app_id;
+    const key = req.body.key;
+    console.log(`got screenshot key`, key);
+    const deleteresponse = await applicationModel.deleteScreenshot(key);
+    res.json(deleteresponse);
+  },
+  uploadNewScreenshots: async (req, res) => {
+    try {
+      const app_id = req.body.app_id;
+      const uploadDirName = `${app_id}`;
+      let files = req.files.screenshot;
+      if (!files) {
+        console.error('No files uploaded');
+        return res.status(400).json({ error: 'No files uploaded' });
+      }
+      // Normalize files to an array if it's a single file
+      if (!Array.isArray(files)) {
+        files = [files];
+      }
+      const uploadedFiles = [];
+      const allowedFormats = ['.png', '.jpg', '.jpeg'];
+      const fileSizeLimit = 100 * 1024 * 1024;
+  
+      const uploadPromises = files.map(async (file) => {
+        const fileExtension = path.extname(file.name).toLowerCase();
+        if (!allowedFormats.includes(fileExtension)) {
+          throw new Error(`File format not allowed for ${file.name}`);
+        }
+        const fileSize = file.size;
+        if (fileSize > fileSizeLimit) {
+          throw new Error(`File size exceeds the limit for ${file.name}`);
+        }
+        const fileName = file.name;
+        console.log(`filename:`,fileName);
+        const params = {
+          Bucket: process.env.AWS_Bucket_name,
+          Key: `${uploadDirName}/${fileName}`,
+          Body: file.data,
+        };
+  
+        const uploadResult = await s3.upload(params).promise();
+        uploadedFiles.push(uploadResult.Location);
+      });
+  
+      const result = await Promise.all(uploadPromises);
+      console.log(`result`,result);
+      if (result) {
+        return res.status(201).json({ message: 'Screenshots updated successfully', uploadedFiles });
+      } else {
+        res.status(400).json({ message: 'Error creating application' });
+      }
+    } catch (err) {
+      console.error('Error updating screenshots:', err);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
   getAppicon: async (req, res) => {
     const applicationModel = new appModel();
     const app_id = req.params.id;
     const files = await applicationModel.getAppicon(app_id);
     res.json(files);
   },
+  updateAppIcon: async (req, res) => {
+    try {
+        const app_id = req.body.app_id;
+        const uploadDirName = `${app_id}`;
+        const file = req.files.appicon;
+
+        if (!file) {
+            console.error('No file uploaded');
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const allowedFormats = ['.png', '.jpg', '.jpeg'];
+        const fileSizeLimit = 100 * 1024 * 1024;
+        const fileExtension = path.extname(file.name).toLowerCase();
+
+        if (!allowedFormats.includes(fileExtension)) {
+            throw new Error(`File format not allowed for ${file.name}`);
+        }
+
+        const fileSize = file.size;
+        if (fileSize > fileSizeLimit) {
+            throw new Error(`File size exceeds the limit for ${file.name}`);
+        }
+
+        // Delete existing app icon if it exists
+        const listParams = {
+            Bucket: process.env.AWS_Bucket_name,
+            Prefix: `${uploadDirName}/appicon`
+        };
+
+        const existingAppIcons = await s3.listObjectsV2(listParams).promise();
+        if (existingAppIcons.Contents.length > 0) {
+            const deleteParams = {
+                Bucket: process.env.AWS_Bucket_name,
+                Delete: {
+                    Objects: existingAppIcons.Contents.map(obj => ({ Key: obj.Key }))
+                }
+            };
+            await s3.deleteObjects(deleteParams).promise();
+        }
+
+        // Upload new app icon
+        const params = {
+            Bucket: process.env.AWS_Bucket_name,
+            Key: `${uploadDirName}/appicon_${Date.now()}${fileExtension}`,
+            Body: file.data,
+        };
+
+        const uploadResult = await s3.upload(params).promise();
+        const uploadedFile = uploadResult.Location;
+
+        res.status(201).json({ message: 'App icon updated successfully', uploadedFile });
+    } catch (err) {
+        console.error('Error updating app icon:', err);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+},
   getVideo: async (req, res) => {
     const applicationModel = new appModel();
     const app_id = req.params.id;
     const files = await applicationModel.getVideo(app_id);
     res.json(files);
   },
+  updateAppVideo: async (req, res) => {
+    try {
+        const app_id = req.body.app_id;
+        const uploadDirName = `${app_id}`;
+        const file = req.files.appvideo;
+
+        if (!file) {
+            console.error('No file uploaded');
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const allowedFormats = ['.mp4'];
+        const fileSizeLimit = 100 * 1024 * 1024;
+        const fileExtension = path.extname(file.name).toLowerCase();
+
+        if (!allowedFormats.includes(fileExtension)) {
+            throw new Error(`File format not allowed for ${file.name}`);
+        }
+
+        const fileSize = file.size;
+        if (fileSize > fileSizeLimit) {
+            throw new Error(`File size exceeds the limit for ${file.name}`);
+        }
+
+        // Delete existing app icon if it exists
+        const listParams = {
+            Bucket: process.env.AWS_Bucket_name,
+            Prefix: `${uploadDirName}/video`
+        };
+
+        const existingAppIcons = await s3.listObjectsV2(listParams).promise();
+        if (existingAppIcons.Contents.length > 0) {
+            const deleteParams = {
+                Bucket: process.env.AWS_Bucket_name,
+                Delete: {
+                    Objects: existingAppIcons.Contents.map(obj => ({ Key: obj.Key }))
+                }
+            };
+            await s3.deleteObjects(deleteParams).promise();
+        }
+
+  
+        const params = {
+            Bucket: process.env.AWS_Bucket_name,
+            Key: `${uploadDirName}/video_${Date.now()}${fileExtension}`,
+            Body: file.data,
+        };
+
+        const uploadResult = await s3.upload(params).promise();
+        const uploadedFile = uploadResult.Location;
+
+        res.status(201).json({ message: 'App video updated successfully', uploadedFile });
+    } catch (err) {
+        console.error('Error updating app video:', err);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+},
   getApk: async (req, res) => {
     const applicationModel = new appModel();
     const app_id = req.params.id;

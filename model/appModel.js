@@ -45,7 +45,7 @@ class ApplicationModel {
         "long_description": { S: app.long_description },
         "support_url": { S: app.support_url },
         "website_url": { S: app.website_url },
-        "price" : {S : app.price}, 
+        "price": { S: app.price },
         "status": { S: app.status }
         // Add more attributes as needed
       }
@@ -167,8 +167,8 @@ class ApplicationModel {
         console.log('Failed to delete hash value.');
       }
 
-      const testcaseDeleted= await testCase.deleteValidation(app_id);
-      if(!testcaseDeleted){
+      const testcaseDeleted = await testCase.deleteValidation(app_id);
+      if (!testcaseDeleted) {
         console.log(`failed to delete testcase result. `);
       }
       // Delete the application from DynamoDB
@@ -206,11 +206,28 @@ class ApplicationModel {
             })
           };
         });
-      
+
       return files;
     } catch (err) {
       console.error('Error listing files:', err);
       return [];
+    }
+  }
+  async deleteScreenshot(key) {
+    const params = {
+      Bucket: process.env.AWS_Bucket_name,
+      Key: key.toString()
+    };  
+    try {
+      const data = await s3.deleteObject(params).promise();
+      if (data.status === 200) {
+        console.log('Screenshot deleted successfully:', data);
+        return data;
+      }
+    }
+    catch (err) {
+      console.error('Error deleting screenshot:', err);
+      throw err;
     }
   }
   async getAppicon(app_id) {

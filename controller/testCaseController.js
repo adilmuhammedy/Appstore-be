@@ -15,7 +15,6 @@ const testCaseValidationController = {
 
     updateValidation: async (req, res) => {
         const { app_id, testCase, status } = req.body;
-        console.log(req.body);
         const validationModel = new TestCaseValidationModel();
         const result = await validationModel.updateValidation(app_id, testCase, status);
         if (result) {
@@ -32,7 +31,7 @@ const testCaseValidationController = {
         const validationModel = new TestCaseValidationModel();
         const result = await validationModel.getValidation(app_id);
         if (result) {
-            console.log('Validation record fetched successfully',result);
+            console.log('Validation record fetched successfully');
             res.send(result);
         } else {
             console.log('Failed to fetch validation record');

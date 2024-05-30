@@ -77,7 +77,6 @@ class TestCaseValidationModel {
         try {
             const data = await dynamoDB.get(params).promise();
             if (data.Item) {
-                console.log(data.Item);
                 return data.Item;
             } else {
                 console.log(`No validation record found for app_id: ${app_id}`);
