@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const appController = require('../controller/appController');
 
-/**
+/** 
  * @swagger
  * tags:
  *   name: Apps
@@ -14,7 +14,8 @@ const appController = require('../controller/appController');
  * /app/upload:
  *   post:
  *     summary: Upload files and save app data
- *     tags: [Apps]
+ *     tags: 
+ *       - Apps
  *     requestBody:
  *       required: true
  *       content:
@@ -70,7 +71,8 @@ router.post('/upload', appController.uploadFilesAndSaveData);
  * /app/getApps:
  *   get:
  *     summary: Get all apps
- *     tags: [Apps]
+ *     tags: 
+ *       - Apps
  *     responses:
  *       200:
  *         description: A list of all apps
@@ -84,7 +86,8 @@ router.get('/getApps', appController.getAllApps);
  * /app/{id}:
  *   get:
  *     summary: Get app by ID
- *     tags: [Apps]
+ *     tags: 
+ *       - Apps
  *     parameters:
  *       - in: path
  *         name: id
@@ -108,7 +111,8 @@ router.get('/:id', appController.getApp);
  * /app/getscreenshots/{id}:
  *   get:
  *     summary: Get screenshots by app ID
- *     tags: [Apps]
+ *     tags: 
+ *       - Apps
  *     parameters:
  *       - in: path
  *         name: id
@@ -130,7 +134,8 @@ router.get('/getscreenshots/:id', appController.getScreenshot);
  * /app/deletescreenshot:
  *   post:
  *     summary: Delete a screenshot
- *     tags: [Apps]
+ *     tags: 
+ *       - Apps
  *     requestBody:
  *       required: true
  *       content:
@@ -147,76 +152,79 @@ router.get('/getscreenshots/:id', appController.getScreenshot);
  *         description: Screenshot deleted successfully
  *       500:
  *         description: Internal server error
- * */
+ */
 router.post('/deletescreenshot', appController.deleteScreenshot);
 
 
 /**
  * @swagger
-* /app/uploadnewscreenshot:
-*   post:
-*     summary: Upload new screenshots
-*     tags: [Apps]
-*     requestBody:
-*       required: true
-*       content:
-*         multipart/form-data:
-*           schema:
-*             type: object
-*             properties:
-*               app_id:
-*                 type: string
-*               screenshot:
-*                 type: array
-*                 items:
-*                   type: string
-*                   format: binary
-*     responses:
-*       201:
-*         description: Screenshots uploaded successfully
-*       400:
-*         description: Error creating application
-*       500:
-*         description: Internal server error
-*/
-router.post('/uploadnewscreenshot',appController.uploadNewScreenshots);
+ * /app/uploadnewscreenshot:
+ *   post:
+ *     summary: Upload new screenshots
+ *     tags: 
+ *       - Apps
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               app_id:
+ *                 type: string
+ *               screenshot:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       201:
+ *         description: Screenshots uploaded successfully
+ *       400:
+ *         description: Error creating application
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/uploadnewscreenshot', appController.uploadNewScreenshots);
 
 
 /**
  * @swagger
-* /app/updateappicon:
-*   post:
-*     summary: Update app icon
-*     tags: [Apps]
-*     requestBody:
-*       required: true
-*       content:
-*         multipart/form-data:
-*           schema:
-*             type: object
-*             properties:
-*               app_id:
-*                 type: string
-*               appicon:
-*                 type: string
-*                 format: binary
-*     responses:
-*       201:
-*         description: App icon updated successfully
-*       400:
-*         description: Error updating app icon
-*       500:
-*         description: Internal server error
-*/
-router.post('/updateappicon',appController.updateAppIcon);
+ * /app/updateappicon:
+ *   post:
+ *     summary: Update app icon
+ *     tags: 
+ *       - Apps
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               app_id:
+ *                 type: string
+ *               appicon:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: App icon updated successfully
+ *       400:
+ *         description: Error updating app icon
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/updateappicon', appController.updateAppIcon);
 
 
 /**
  * @swagger
-* /app/updateappvideo:
+ * /app/updateappvideo:
  *   post:
  *     summary: Update app video
- *     tags: [Apps]
+ *     tags: 
+ *       - Apps
  *     requestBody:
  *       required: true
  *       content:
@@ -237,7 +245,7 @@ router.post('/updateappicon',appController.updateAppIcon);
  *       500:
  *         description: Internal server error
  */
-router.post('/updateappvideo',appController.updateAppVideo);
+router.post('/updateappvideo', appController.updateAppVideo);
 
 
 /**
@@ -385,7 +393,7 @@ router.get('/fetchapkfile/:id', appController.getApk);
 
 /**
  * @swagger
- * * /app/updatestatus/{id}:
+ * /app/updatestatus/{id}:
  *   post:
  *     summary: Update application status by ID
  *     tags: [Apps]
