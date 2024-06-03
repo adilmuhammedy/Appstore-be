@@ -1,37 +1,36 @@
-const AWS = require('aws-sdk');
-const { DynamoDB } = require('aws-sdk');
-const dynamoDB = new DynamoDB.DocumentClient({ region: process.env.AWS_REGION });
+const { DynamoDBClient, PutItemCommand, UpdateItemCommand, GetItemCommand, DeleteItemCommand } = require('@aws-sdk/client-dynamodb');
 
 const tableName = "Appstore-app-validations"; // Name of your DynamoDB table for test case validations
 
+const dynamoDBClient = new DynamoDBClient({ region: process.env.AWS_Region });
+
 class TestCaseValidationModel {
     async insertValidation(app_id) {
-        // Construct the item object with app_id and test case columns initialized to "not done"
         const item = {
-            "app_id": app_id,
-            "APK Signature": "not done",
-            "App Permissions": "not done",
-            "Supported Devices and Screen Sizes": "not done",
-            "Code Quality": "not done",
-            "App content": "not done",
-            "App security": "not done",
-            "Performance": "not done",
-            "Accessibility": "not done",
-            "App store guidelines and policies": "not done",
-            "App icons and screenshots": "not done",
+            "app_id": { S: app_id },
+            "APK Signature": { S: "not done" },
+            "App Permissions": { S: "not done" },
+            "Supported Devices and Screen Sizes": { S: "not done" },
+            "Code Quality": { S: "not done" },
+            "App content": { S: "not done" },
+            "App security": { S: "not done" },
+            "Performance": { S: "not done" },
+            "Accessibility": { S: "not done" },
+            "App store guidelines and policies": { S: "not done" },
+            "App icons and screenshots": { S: "not done" },
         };
-    
+
         const params = {
             TableName: tableName,
             Item: item,
             ConditionExpression: "attribute_not_exists(app_id)" // Ensures no existing item with the same app_id exists
         };
-    
+
         try {
-            await dynamoDB.put(params).promise();
+            await dynamoDBClient.send(new PutItemCommand(params));
             return true;
         } catch (err) {
-            if (err.code === 'ConditionalCheckFailedException') {
+            if (err.name === 'ConditionalCheckFailedException') {
                 console.log("Entry for the corresponding app_id already exists. No insertion performed.");
                 return false;
             } else {
@@ -40,26 +39,23 @@ class TestCaseValidationModel {
             }
         }
     }
-    
 
     async updateValidation(app_id, test_case, status) {
         const params = {
             TableName: tableName,
-            Key: {
-                "app_id": app_id
-            },
+            Key: { "app_id": { S: app_id } },
             UpdateExpression: `SET #test_case = :status`,
             ExpressionAttributeNames: {
                 '#test_case': test_case
             },
             ExpressionAttributeValues: {
-                ':status': status
+                ':status': { S: status }
             },
             ReturnValues: 'ALL_NEW'
         };
 
         try {
-            const result = await dynamoDB.update(params).promise();
+            const result = await dynamoDBClient.send(new UpdateItemCommand(params));
             return result.Attributes;
         } catch (err) {
             console.error("Error updating validation record:", err);
@@ -70,12 +66,11 @@ class TestCaseValidationModel {
     async getValidation(app_id) {
         const params = {
             TableName: tableName,
-            Key: {
-                "app_id": app_id
-            }
+            Key: { "app_id": { S: app_id } }
         };
+
         try {
-            const data = await dynamoDB.get(params).promise();
+            const data = await dynamoDBClient.send(new GetItemCommand(params));
             if (data.Item) {
                 return data.Item;
             } else {
@@ -91,13 +86,11 @@ class TestCaseValidationModel {
     async deleteValidation(app_id) {
         const params = {
             TableName: tableName,
-            Key: {
-                "app_id": app_id
-            }
+            Key: { "app_id": { S: app_id } }
         };
 
         try {
-            await dynamoDB.delete(params).promise();
+            await dynamoDBClient.send(new DeleteItemCommand(params));
             console.log(`Successfully deleted validation record for app_id: ${app_id}`);
             return true;
         } catch (err) {

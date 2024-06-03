@@ -1,12 +1,13 @@
 const fs = require('fs');
 require('dotenv').config();
-const AWS = require('aws-sdk');
-const { DynamoDB } = require('aws-sdk');
-const dynamoDB = new DynamoDB({ region: process.env.AWS_Region });
+const { S3Client, ListObjectsV2Command, DeleteObjectsCommand, DeleteObjectCommand, GetObjectCommand, PutObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
+const { DynamoDBClient, PutItemCommand, GetItemCommand, ScanCommand, UpdateItemCommand, DeleteItemCommand } = require('@aws-sdk/client-dynamodb');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner'); // Required for signed URLs
 const HashValueModel = require('./hashValueModel');
 const JsonModel = require('./jsonModel');
 const TestCaseModel = require('./testCaseModel');
 
+// Function to load SSL certificates
 function getAWSConfig() {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
   const certs = [
@@ -15,23 +16,31 @@ function getAWSConfig() {
   ];
   return { sslCaCerts: certs };
 }
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_Access_Key,
-  secretAccessKey: process.env.AWS_Secret_Access_Key,
-  sslEnabled: false,
-});
-const SESConfig = {
-  accessKeyId: process.env.AWS_Access_Key,
-  secretAccessKey: process.env.AWS_Secret_Access_Key,
+
+// AWS Configuration with SSL certificates
+const awsConfig = {
   region: process.env.AWS_Region,
-  ...getAWSConfig() // Merge SSL certificates into SESConfig
+  credentials: {
+    accessKeyId: process.env.AWS_Access_Key,
+    secretAccessKey: process.env.AWS_Secret_Access_Key,
+  },
+  ...getAWSConfig(), // Merge SSL certificates into awsConfig
 };
 
-AWS.config.update(SESConfig);
+// Initialize S3 Client
+const s3Client = new S3Client(awsConfig);
+
+// Initialize DynamoDB Client
+const dynamoDBClient = new DynamoDBClient(awsConfig);
+
 const TableName = "Appstore-app-appdetails";
 
-
 class ApplicationModel {
+  constructor(dynamoDBClient, s3Client) {
+    this.dynamoDB = dynamoDBClient;
+    this.s3 = s3Client;
+  }
+
   async createApplication(app) {
     const params = {
       TableName,
@@ -52,7 +61,7 @@ class ApplicationModel {
     };
 
     try {
-      await dynamoDB.putItem(params).promise();
+      await this.dynamoDB.send(new PutItemCommand(params));
       return true;
     } catch (err) {
       console.error("Error creating application:", err);
@@ -69,7 +78,7 @@ class ApplicationModel {
     };
 
     try {
-      const data = await dynamoDB.getItem(params).promise();
+      const data = await this.dynamoDB.send(new GetItemCommand(params));
       return data.Item;
     } catch (err) {
       console.error("Error getting application:", err);
@@ -83,7 +92,7 @@ class ApplicationModel {
     };
 
     try {
-      const data = await dynamoDB.scan(params).promise();
+      const data = await this.dynamoDB.send(new ScanCommand(params));
       return data.Items;
     } catch (err) {
       console.error("Error getting all applications:", err);
@@ -116,7 +125,7 @@ class ApplicationModel {
     };
 
     try {
-      const data = await dynamoDB.updateItem(params).promise();
+      const data = await this.dynamoDB.send(new UpdateItemCommand(params));
       console.log('Updated application:', data.Attributes);
       return data.Attributes;
     } catch (err) {
@@ -133,7 +142,7 @@ class ApplicationModel {
 
     try {
       // List objects in the folder
-      const listedObjects = await s3.listObjectsV2(deleteFilesParams).promise();
+      const listedObjects = await this.s3.send(new ListObjectsV2Command(deleteFilesParams));
 
       if (listedObjects.Contents.length === 0) {
         console.log('No files to delete.');
@@ -141,15 +150,11 @@ class ApplicationModel {
         // Create delete parameters
         const deleteParams = {
           Bucket: process.env.AWS_Bucket_name,
-          Delete: { Objects: [] }
+          Delete: { Objects: listedObjects.Contents.map(({ Key }) => ({ Key })) }
         };
 
-        listedObjects.Contents.forEach(({ Key }) => {
-          deleteParams.Delete.Objects.push({ Key });
-        });
-
         // Delete the files
-        await s3.deleteObjects(deleteParams).promise();
+        await this.s3.send(new DeleteObjectsCommand(deleteParams));
         console.log('Files deleted successfully.');
       }
 
@@ -169,7 +174,7 @@ class ApplicationModel {
 
       const testcaseDeleted = await testCase.deleteValidation(app_id);
       if (!testcaseDeleted) {
-        console.log(`failed to delete testcase result. `);
+        console.log(`Failed to delete testcase result.`);
       }
       // Delete the application from DynamoDB
       const deleteAppParams = {
@@ -179,13 +184,14 @@ class ApplicationModel {
         }
       };
 
-      await dynamoDB.deleteItem(deleteAppParams).promise();
+      await this.dynamoDB.send(new DeleteItemCommand(deleteAppParams));
       return true;
     } catch (err) {
       console.error("Error deleting application:", err);
       return false;
     }
   }
+
   async getScreenshot(app_id) {
     const params = {
       Bucket: process.env.AWS_Bucket_name,
@@ -193,19 +199,16 @@ class ApplicationModel {
     };
 
     try {
-      const data = await s3.listObjectsV2(params).promise();
-      const files = data.Contents
-        .filter(file => !file.Key.endsWith('.apk') && file.Key.includes(`${app_id}/screenshot`)) // Filter out .apk files and only include files starting with "screenshot"
-        .map(file => {
-          return {
-            key: file.Key,
-            url: s3.getSignedUrl('getObject', {
-              Bucket: process.env.AWS_Bucket_name,
-              Key: file.Key,
-              Expires: 60 * 60
-            })
-          };
-        });
+      const data = await this.s3.send(new ListObjectsV2Command(params));
+      const files = await Promise.all(data.Contents
+        .filter(file => !file.Key.endsWith('.apk') && file.Key.includes(`${app_id}/screenshot`))
+        .map(async file => {
+          const url = await getSignedUrl(this.s3, new GetObjectCommand({
+            Bucket: process.env.AWS_Bucket_name,
+            Key: file.Key
+          }), { expiresIn: 3600 });
+          return { key: file.Key, url };
+        }));
 
       return files;
     } catch (err) {
@@ -213,23 +216,23 @@ class ApplicationModel {
       return [];
     }
   }
+
   async deleteScreenshot(key) {
     const params = {
       Bucket: process.env.AWS_Bucket_name,
       Key: key.toString()
-    };  
+    };
+
     try {
-      const data = await s3.deleteObject(params).promise();
-      if (data.status === 200) {
-        console.log('Screenshot deleted successfully:', data);
-        return data;
-      }
-    }
-    catch (err) {
+      await this.s3.send(new DeleteObjectCommand(params));
+      console.log('Screenshot deleted successfully');
+      return true;
+    } catch (err) {
       console.error('Error deleting screenshot:', err);
       throw err;
     }
   }
+
   async getAppicon(app_id) {
     const params = {
       Bucket: process.env.AWS_Bucket_name,
@@ -237,25 +240,23 @@ class ApplicationModel {
     };
 
     try {
-      const data = await s3.listObjectsV2(params).promise();
-      const files = data.Contents
-        .filter(file => !file.Key.endsWith('.apk') && file.Key.includes(`${app_id}/appicon`)) // Filter out .apk files and only include files starting with "screenshot"
-        .map(file => {
-          return {
-            key: file.Key,
-            url: s3.getSignedUrl('getObject', {
-              Bucket: process.env.AWS_Bucket_name,
-              Key: file.Key,
-              Expires: 60 * 60
-            })
-          };
-        });
+      const data = await this.s3.send(new ListObjectsV2Command(params));
+      const files = await Promise.all(data.Contents
+        .filter(file => !file.Key.endsWith('.apk') && file.Key.includes(`${app_id}/appicon`))
+        .map(async file => {
+          const url = await getSignedUrl(this.s3, new GetObjectCommand({
+            Bucket: process.env.AWS_Bucket_name,
+            Key: file.Key
+          }), { expiresIn: 3600 });
+          return { key: file.Key, url };
+        }));
       return files;
     } catch (err) {
       console.error('Error listing files:', err);
       return [];
     }
   }
+
   async getVideo(app_id) {
     const params = {
       Bucket: process.env.AWS_Bucket_name,
@@ -263,25 +264,23 @@ class ApplicationModel {
     };
 
     try {
-      const data = await s3.listObjectsV2(params).promise();
-      const files = data.Contents
-        .filter(file => !file.Key.endsWith('.apk') && file.Key.includes(`${app_id}/video`)) // Filter out .apk files and only include files starting with "screenshot"
-        .map(file => {
-          return {
-            key: file.Key,
-            url: s3.getSignedUrl('getObject', {
-              Bucket: process.env.AWS_Bucket_name,
-              Key: file.Key,
-              Expires: 60 * 60
-            })
-          };
-        });
+      const data = await this.s3.send(new ListObjectsV2Command(params));
+      const files = await Promise.all(data.Contents
+        .filter(file => !file.Key.endsWith('.apk') && file.Key.includes(`${app_id}/video`))
+        .map(async file => {
+          const url = await getSignedUrl(this.s3, new GetObjectCommand({
+            Bucket: process.env.AWS_Bucket_name,
+            Key: file.Key
+          }), { expiresIn: 3600 });
+          return { key: file.Key, url };
+        }));
       return files;
     } catch (err) {
       console.error('Error listing files:', err);
       return [];
     }
   }
+
   async getApk(app_id) {
     const params = {
       Bucket: process.env.AWS_Bucket_name,
@@ -289,14 +288,13 @@ class ApplicationModel {
     };
 
     try {
-      const data = await s3.listObjectsV2(params).promise();
-      const apkFile = data.Contents.find(file => file.Key.endsWith('.apk')); // Find the first .apk file
+      const data = await this.s3.send(new ListObjectsV2Command(params));
+      const apkFile = data.Contents.find(file => file.Key.endsWith('.apk'));
       if (apkFile) {
-        const url = s3.getSignedUrl('getObject', {
+        const url = await getSignedUrl(this.s3, new GetObjectCommand({
           Bucket: process.env.AWS_Bucket_name,
-          Key: apkFile.Key,
-          Expires: 60 * 60 // Expiry time in seconds
-        });
+          Key: apkFile.Key
+        }), { expiresIn: 3600 });
         return { key: apkFile.Key, url };
       } else {
         console.error('APK file not found.');
@@ -307,6 +305,7 @@ class ApplicationModel {
       return null;
     }
   }
+
   async updateAppStatus(app_id, status) {
     const params = {
       TableName,
@@ -324,7 +323,7 @@ class ApplicationModel {
     };
 
     try {
-      const result = await dynamoDB.updateItem(params).promise();
+      const result = await this.dynamoDB.send(new UpdateItemCommand(params));
       return result.Attributes;
     } catch (err) {
       console.error("Error updating application status:", err);
@@ -333,7 +332,9 @@ class ApplicationModel {
   }
 
 }
-// const appModel = new ApplicationModel();
+
+// Example usage
+// const appModel = new ApplicationModel(dynamoDBClient, s3Client);
 // appModel.getApk("209cf276-f260-4911-9752-9f1e901add83")
 // .then(apkInfo => {
 //   if (apkInfo) {
@@ -347,4 +348,3 @@ class ApplicationModel {
 // });
 
 module.exports = ApplicationModel;
-

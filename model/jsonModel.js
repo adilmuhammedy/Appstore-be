@@ -1,6 +1,8 @@
 const fs = require('fs');
 require('dotenv').config();
-const AWS = require('aws-sdk');
+const { S3Client, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { DynamoDBClient, UpdateItemCommand } = require('@aws-sdk/client-dynamodb');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 // Function to load SSL certificates
 function getAWSConfig() {
@@ -12,39 +14,34 @@ function getAWSConfig() {
   return { sslCaCerts: certs };
 }
 
-// Initialize S3
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_Access_Key,
-  secretAccessKey: process.env.AWS_Secret_Access_Key,
-  sslEnabled: false,
-});
-
 // AWS Configuration with SSL certificates
-const SESConfig = {
-  accessKeyId: process.env.AWS_Access_Key,
-  secretAccessKey: process.env.AWS_Secret_Access_Key,
+const awsConfig = {
   region: process.env.AWS_Region,
-  ...getAWSConfig()
+  credentials: {
+    accessKeyId: process.env.AWS_Access_Key,
+    secretAccessKey: process.env.AWS_Secret_Access_Key,
+  },
+  ...getAWSConfig() // Merge SSL certificates into awsConfig
 };
 
-AWS.config.update(SESConfig);
+// Initialize S3 Client
+const s3Client = new S3Client(awsConfig);
 
-// Initialize DynamoDB DocumentClient
-const docClient = new AWS.DynamoDB.DocumentClient();
+// Initialize DynamoDB Client
+const dynamoDBClient = new DynamoDBClient(awsConfig);
 
 class JsonModel {
-   
 
     async getJsonReportUrl(app_id) {
         const fileName = `${app_id}.json`; // Name of the JSON file in S3
         const params = {
             Bucket: `adil-develop-app-json`,
             Key: `jsonReports/${fileName}`, // Path to the JSON file in S3
-            Expires: 3600 // URL expires in 1 hour (adjust as needed)
         };
-    
+
         try {
-            const url = await s3.getSignedUrlPromise('getObject', params);
+            const command = new GetObjectCommand(params);
+            const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // URL expires in 1 hour
             return url;
         } catch (err) {
             console.error("Error generating pre-signed URL:", err);
@@ -61,7 +58,8 @@ class JsonModel {
         };
 
         try {
-            await s3.deleteObject(params).promise();
+            const command = new DeleteObjectCommand(params);
+            await s3Client.send(command);
             console.log(`JSON file deleted from S3: ${fileName}`);
             return true;
         } catch (err) {
@@ -69,23 +67,25 @@ class JsonModel {
             return false;
         }
     }
+
     async updateDynamoDBStatus(app_id, status) {
         const params = {
             TableName: "Appstore-app-appdetails",
             Key: {
-                "app_id": app_id
+                "app_id": { S: app_id }
             },
             UpdateExpression: "set #status = :status",
             ExpressionAttributeNames: {
                 "#status": "status"
             },
             ExpressionAttributeValues: {
-                ":status": status
+                ":status": { S: status }
             }
         };
-    
+
         try {
-            await docClient.update(params).promise();
+            const command = new UpdateItemCommand(params);
+            await dynamoDBClient.send(command);
             console.log(`Status updated to "${status}" for application ID ${app_id} in DynamoDB.`);
         } catch (error) {
             console.error("Error updating status in DynamoDB:", error);
@@ -102,23 +102,24 @@ class JsonModel {
             Body: jsonReportString,
             ContentType: "application/json"
         };
-    
+
         // Check if the file already exists in S3
         const headParams = {
             Bucket: `adil-develop-app-json`,
             Key: `jsonReports/${fileName}`
         };
-    
+
         try {
             // Check if the object exists
-            await s3.headObject(headParams).promise();
+            const headCommand = new HeadObjectCommand(headParams);
+            await s3Client.send(headCommand);
             console.log(`JSON file with name ${fileName} already exists in S3. No need to upload.`);
             return true; // Return true indicating that no upload is necessary
         } catch (err) {
-            // If the headObject call throws an error, the file does not exist, so upload it
-            if (err.code === 'NotFound') {
+            if (err.name === 'NotFound') {
                 try {
-                    const data = await s3.upload(params).promise();
+                    const putCommand = new PutObjectCommand(params);
+                    const data = await s3Client.send(putCommand);
                     console.log(`JSON file uploaded to S3: ${data.Location}`);
                     await this.updateDynamoDBStatus(app_id, "Analyzed");
                     return data.Location; // S3 URL of the uploaded JSON file
