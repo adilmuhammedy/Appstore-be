@@ -30,7 +30,7 @@ const userController = {
         try {
             const user = await userModel.getUser(username);
             if (user) {
-                const passwordMatch = await bcrypt.compare(password, user[0].password.S);
+                const passwordMatch =  bcrypt.compare(password, user[0].password.S);
                 const token = jwt.sign({ userid: user[0].userid.S }, 'qwertyuiopasdfghjklzxcvbnmqwertyuiop', { expiresIn: '1h' });
                 if (passwordMatch) {
                     res.status(200).json({role:user[0].role.S,token: token, username:user[0].username.S,message: "Login successful" });

@@ -2,7 +2,7 @@ const { DynamoDBClient, PutItemCommand, UpdateItemCommand, GetItemCommand, Delet
 
 const tableName = "Appstore-app-validations"; // Name of your DynamoDB table for test case validations
 
-const dynamoDBClient = new DynamoDBClient({ region: process.env.AWS_Region });
+const dynamoDBClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 class TestCaseValidationModel {
     async insertValidation(app_id) {
@@ -10,7 +10,7 @@ class TestCaseValidationModel {
             "app_id": { S: app_id },
             "APK Signature": { S: "not done" },
             "App Permissions": { S: "not done" },
-            "Supported Devices and Screen Sizes": { S: "not done" },
+            "Vulnerability": { S: "not done" },
             "Code Quality": { S: "not done" },
             "App content": { S: "not done" },
             "App security": { S: "not done" },

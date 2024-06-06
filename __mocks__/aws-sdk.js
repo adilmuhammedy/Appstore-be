@@ -1,11 +1,14 @@
-const AWS = require('aws-sdk');
+const { DynamoDBClient, PutItemCommand } = require('@aws-sdk/client-dynamodb');
 
 const putItemMock = jest.fn();
 
-AWS.DynamoDB = jest.fn().mockImplementation(() => {
-  return {
-    putItem: putItemMock
-  };
-});
+const dynamoDBClient = new DynamoDBClient();
 
-module.exports = AWS;
+dynamoDBClient.send = putItemMock; // Assign the mock function to the send method
+
+module.exports = {
+  DynamoDB: {
+    // Mocking the DynamoDB class
+    send: putItemMock // Mocking the send method
+  }
+};

@@ -1,6 +1,6 @@
 const fs = require('fs');
 require('dotenv').config();
-const { S3Client, ListObjectsV2Command, DeleteObjectsCommand, DeleteObjectCommand, GetObjectCommand, PutObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, ListObjectsV2Command, DeleteObjectsCommand, GetObjectCommand, DeleteObjectCommand, PutObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
 const { DynamoDBClient, PutItemCommand, GetItemCommand, ScanCommand, UpdateItemCommand, DeleteItemCommand } = require('@aws-sdk/client-dynamodb');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner'); // Required for signed URLs
 const HashValueModel = require('./hashValueModel');
@@ -19,10 +19,11 @@ function getAWSConfig() {
 
 // AWS Configuration with SSL certificates
 const awsConfig = {
-  region: process.env.AWS_Region,
+  region: process.env.AWS_REGION,
   credentials: {
-    accessKeyId: process.env.AWS_Access_Key,
-    secretAccessKey: process.env.AWS_Secret_Access_Key,
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    sessionToken: process.env.AWS_SESSION_TOKEN
   },
   ...getAWSConfig(), // Merge SSL certificates into awsConfig
 };
@@ -76,10 +77,9 @@ class ApplicationModel {
         "app_id": { S: app_id }
       }
     };
-
     try {
       const data = await this.dynamoDB.send(new GetItemCommand(params));
-      return data.Item;
+      return data.Item ? data.Item : null;
     } catch (err) {
       console.error("Error getting application:", err);
       return null;

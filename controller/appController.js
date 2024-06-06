@@ -5,23 +5,27 @@ const { v4: uuidv4 } = require('uuid');
 require('dotenv').config();
 const appModel = require('../model/appModel');
 const testCaseModel = require('../model/testCaseModel');
+const HashValueModel = require('../model/hashValueModel');
+const JsonModel = require('../model/jsonModel')
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 
 // Configure AWS SDK
 const s3Client = new S3Client({
-  region: process.env.AWS_Region,
+  region: process.env.AWS_REGION,
   credentials: {
-    accessKeyId: process.env.AWS_Access_Key,
-    secretAccessKey: process.env.AWS_Secret_Access_Key
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    sessionToken: process.env.AWS_SESSION_TOKEN
   }
 });
 
 // Initialize DynamoDB client
 const dynamoDBClient = new DynamoDBClient({
-  region: process.env.AWS_Region,
+  region: process.env.AWS_REGION,
   credentials: {
-    accessKeyId: process.env.AWS_Access_Key,
-    secretAccessKey: process.env.AWS_Secret_Access_Key,
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    sessionToken: process.env.AWS_SESSION_TOKEN
   }
 });
 
@@ -155,7 +159,13 @@ const appController = {
   deleteApplication: async (req, res) => {
     const app_id = req.params.id;
     const applicationModel = new appModel(dynamoDBClient, s3Client);
+    const testModel = new testCaseModel();
+    const hashModel = new HashValueModel();
+    const jsonModel = new JsonModel();
     try {
+      const jsonresult = await jsonModel.deleteJsonFileFromS3(app_id);
+      const hashresult = await hashModel.deleteHashValue(app_id);
+      const testresult = await testModel.deleteValidation(app_id);
       const result = await applicationModel.deleteApplication(app_id);
       if (result) {
         res.status(200).json({ message: "Application deleted successfully" });

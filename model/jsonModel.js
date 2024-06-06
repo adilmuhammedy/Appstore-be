@@ -16,10 +16,11 @@ function getAWSConfig() {
 
 // AWS Configuration with SSL certificates
 const awsConfig = {
-  region: process.env.AWS_Region,
+  region: process.env.AWS_REGION,
   credentials: {
-    accessKeyId: process.env.AWS_Access_Key,
-    secretAccessKey: process.env.AWS_Secret_Access_Key,
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    sessionToken: process.env.AWS_SESSION_TOKEN
   },
   ...getAWSConfig() // Merge SSL certificates into awsConfig
 };
