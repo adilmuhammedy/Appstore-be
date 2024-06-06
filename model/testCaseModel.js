@@ -1,7 +1,7 @@
 const { DynamoDBClient, PutItemCommand, UpdateItemCommand, GetItemCommand, DeleteItemCommand } = require('@aws-sdk/client-dynamodb');
 
 const tableName = "Appstore-app-validations"; // Name of your DynamoDB table for test case validations
-
+const {docClient} = require('../config');
 const dynamoDBClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 class TestCaseValidationModel {
@@ -27,7 +27,7 @@ class TestCaseValidationModel {
         };
 
         try {
-            await dynamoDBClient.send(new PutItemCommand(params));
+            await docClient.send(new PutItemCommand(params));
             return true;
         } catch (err) {
             if (err.name === 'ConditionalCheckFailedException') {
@@ -55,7 +55,7 @@ class TestCaseValidationModel {
         };
 
         try {
-            const result = await dynamoDBClient.send(new UpdateItemCommand(params));
+            const result = await docClient.send(new UpdateItemCommand(params));
             return result.Attributes;
         } catch (err) {
             console.error("Error updating validation record:", err);
@@ -64,13 +64,14 @@ class TestCaseValidationModel {
     }
 
     async getValidation(app_id) {
+        console.log(`appid at validation`, app_id);
         const params = {
             TableName: tableName,
             Key: { "app_id": { S: app_id } }
         };
-
         try {
-            const data = await dynamoDBClient.send(new GetItemCommand(params));
+            const data = await docClient.send(new GetItemCommand(params));
+            console.log(data);
             if (data.Item) {
                 return data.Item;
             } else {
@@ -90,7 +91,7 @@ class TestCaseValidationModel {
         };
 
         try {
-            await dynamoDBClient.send(new DeleteItemCommand(params));
+            await docClient.send(new DeleteItemCommand(params));
             console.log(`Successfully deleted validation record for app_id: ${app_id}`);
             return true;
         } catch (err) {
